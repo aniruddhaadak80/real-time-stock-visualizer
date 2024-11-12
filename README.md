@@ -11,7 +11,7 @@ A real-time stock data visualization application built with **React**, **WebSock
 
 ## Demo
 
-[Live Demo Link](https://your-live-demo-link.com)
+[Live Demo Link](https://real-time-stock-visualizer.vercel.app/)
 
 ## Screenshots
 
