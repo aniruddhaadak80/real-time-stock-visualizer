@@ -1,63 +1,33 @@
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { LineChart } from 'lucide-react';
 import Chart from './components/Chart';
 import StockSelector from './components/StockSelector';
 import StockStats from './components/StockStats';
-
-const formatDate = (date: Date): string => {
-  return date.toISOString().split('T')[0];
-};
-
-const generateMockData = (symbol: string) => {
-  const basePrice = {
-    AAPL: 180,
-    GOOGL: 140,
-    MSFT: 370,
-    AMZN: 175,
-    TSLA: 180,
-  }[symbol] || 100;
-
-  const now = new Date();
-  const data = [];
-  
-  // Generate data for the last 30 days
-  for (let i = 30; i >= 0; i--) {
-    const date = new Date(now);
-    date.setDate(date.getDate() - i);
-    
-    // Add some randomness to the price
-    const randomChange = (Math.random() - 0.5) * 5;
-    const value = basePrice + randomChange;
-    
-    data.push({
-      time: formatDate(date),
-      value: Number(value.toFixed(2)),
-    });
-  }
-  
-  return data;
-};
+import { generateSeries, nextTickValue, statsForSeries, type PricePoint } from './lib/market';
 
 function App() {
   const [symbol, setSymbol] = useState('AAPL');
-  const [data, setData] = useState(generateMockData('AAPL'));
-  const [stats, setStats] = useState({
-    price: 180,
-    change: 2.5,
-    volume: 5000000,
-    high: 185,
-  });
+  const [data, setData] = useState<PricePoint[]>(() => generateSeries('AAPL'));
+  const [stats, setStats] = useState(() => statsForSeries(generateSeries('AAPL')));
+
+  // The live tick has to continue from the current last value of the series.
+  // Keeping it in a ref avoids reading a stale `data` from the render in
+  // which the effect was created.
+  const lastValueRef = useRef<number>(data[data.length - 1].value);
 
   useEffect(() => {
-    const newData = generateMockData(symbol);
+    const newData = generateSeries(symbol);
     setData(newData);
-    
+    // Every card has to describe the selected symbol only.
+    setStats(statsForSeries(newData));
+    lastValueRef.current = newData[newData.length - 1].value;
+
     const interval = setInterval(() => {
-      const lastValue = data[data.length - 1].value;
-      const newValue = Number((lastValue + (Math.random() - 0.5) * 2).toFixed(2));
-      const newTime = formatDate(new Date());
-      
+      const newValue = nextTickValue(lastValueRef.current);
+      lastValueRef.current = newValue;
+      const newTime = new Date().toISOString().split('T')[0];
+
       setData(prev => {
         const updatedData = [...prev];
         if (updatedData[updatedData.length - 1].time === newTime) {
